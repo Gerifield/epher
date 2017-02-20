@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"git-repos.ustream-adm.in/go/epher/epher"
+	"github.com/gerifield/epher/epher"
 	"github.com/gorilla/mux"
 )
 

@@ -1,4 +1,4 @@
-package: git-repos.ustream-adm.in/go/epher
+package: github.com/gerifield/epher
 import:
 - package: github.com/gorilla/websocket
   version: ^1.0.0
