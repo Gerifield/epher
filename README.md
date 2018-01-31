@@ -9,6 +9,6 @@ Start:
 
 `go run main.go`
 
-Connect with websocket to: `http://127.0.0.1:8080/subscribe/test1`
+Connect with websocket to: `http://127.0.0.1:9090/subscribe/test1`
 
 Send HTTP post requests to: `http://127.0.0.1:9090/publish/test1` 
