@@ -1,4 +1,4 @@
-# Event Pusher ![Go](https://github.com/Gerifield/epher/workflows/Go/badge.svg?branch=master)
+# Event Pusher ![Go](https://github.com/Gerifield/epher/workflows/Go/badge.svg?branch=master) [![Coverage Status](https://coveralls.io/repos/github/Gerifield/epher/badge.svg?branch=master)](https://coveralls.io/github/Gerifield/epher?branch=master)
 
 This stuff allows users to subscribe to a given channel and let the services to send notifications to those channels with an HTTP request.
 All the messages sent to the websocket endpoint will be dropped.
