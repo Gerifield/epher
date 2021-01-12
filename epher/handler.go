@@ -10,10 +10,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{
+var upgrader wsUpgrader = &websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
+}
+
+type wsUpgrader interface {
+	Upgrade(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*websocket.Conn, error)
 }
 
 // Roomer help testing the room related here
@@ -64,12 +68,14 @@ func (e *Epher) delConnection(room string, u *User) {
 }
 
 // WebsocketHandler is the public websocket interface
+// For every new websocket connection we'll keep a new handler open
 func (e *Epher) WebsocketHandler(rw http.ResponseWriter, r *http.Request) {
 	room := chi.URLParam(r, "room")
 
 	ws, err := upgrader.Upgrade(rw, r, nil)
 	if err != nil {
 		log.Println(err)
+		http.Error(rw, "websocket_upgrade_failed", http.StatusInternalServerError)
 		return
 	}
 
@@ -77,7 +83,7 @@ func (e *Epher) WebsocketHandler(rw http.ResponseWriter, r *http.Request) {
 	e.addConnection(room, u)
 	defer e.delConnection(room, u)
 
-	// Keep the loop
+	// Keep the loop running until an error or close
 	_ = u.ReadLoop()
 }
 

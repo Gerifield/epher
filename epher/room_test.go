@@ -1,6 +1,7 @@
 package epher
 
 import (
+	"errors"
 	"sync"
 	"testing"
 
@@ -27,12 +28,13 @@ func TestBasicRoomFunctions(t *testing.T) {
 }
 
 type testTextSender struct {
-	called int
+	sendTextError error
+	called        int
 }
 
 func (tts *testTextSender) SendText(b []byte) error {
 	tts.called++
-	return nil
+	return tts.sendTextError
 }
 
 func TestBroadcastText(t *testing.T) {
@@ -56,4 +58,23 @@ func TestBroadcastText(t *testing.T) {
 	err := r.BroadcastText([]byte("test message"))
 	assert.NoError(t, err)
 	assert.Equal(t, 2, tts.called)
+}
+
+func TestBroadcastTextError(t *testing.T) {
+	r := NewRoom("test1")
+	testUser1 := &User{
+		ID:       1,
+		connLock: &sync.Mutex{},
+	}
+	testError := errors.New("something went wrong")
+
+	tts := &testTextSender{
+		sendTextError: testError,
+	}
+	testUser1.TextSender = tts
+
+	r.AddUser(testUser1)
+	err := r.BroadcastText([]byte("test message"))
+	assert.Equal(t, testError, err)
+	assert.Equal(t, 1, tts.called)
 }

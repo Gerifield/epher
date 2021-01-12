@@ -2,12 +2,14 @@ package epher
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/go-chi/chi"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -111,4 +113,29 @@ func TestDelConnectionDropRoom(t *testing.T) {
 	e.delConnection("test1", &User{ID: 1}) // Trigger a delete with a non-existing user
 	_, ok = e.Rooms["test1"]               // Room should be deleted
 	assert.False(t, ok)
+}
+
+type testUpgrader struct {
+	upgradError error
+}
+
+func (t testUpgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*websocket.Conn, error) {
+	return nil, t.upgradError
+}
+
+func TestWebsocketHandlerUpgradeFail(t *testing.T) {
+	e := New()
+
+	// Make sure we store then restore the global state
+	oldUpgrader := upgrader
+	defer func() { upgrader = oldUpgrader }()
+
+	upgrader = testUpgrader{
+		upgradError: errors.New("something"),
+	}
+	rr := httptest.NewRecorder()
+	e.WebsocketHandler(rr, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	assert.Equal(t, http.StatusInternalServerError, rr.Code)
+	assert.Equal(t, "websocket_upgrade_failed\n", rr.Body.String())
 }
