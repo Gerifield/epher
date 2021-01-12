@@ -1,14 +1,31 @@
 # Event Pusher
 
-This stuff allows users to subscribe to a given channel and let's services to send notifications to those channels with an HTTP request.
-
+This stuff allows users to subscribe to a given channel and let the services to send notifications to those channels with an HTTP request.
+All the messages sent to the websocket endpoint will be dropped.
 
 # Usage
 
-Start:
+```
+  -listen string
+    	HTTP and WS server listen address (default ":9090")
+```
 
-`go run main.go`
+# Example
 
-Connect with websocket to: `http://127.0.0.1:9090/subscribe/test1`
+Start the server:
 
-Send HTTP post requests to: `http://127.0.0.1:9090/publish/test1` 
+```
+$ go run main.go
+```
+It'll start on port `9090` by default.
+
+Connect with websocket to the subscribe endpoint (for example using websocat):
+```
+$ websocat ws://127.0.0.1:9090/subscribe/test1
+```
+
+Send HTTP post requests to the publish endpoint:
+```
+$ curl 127.0.0.1:9090/publish/test1 -d 'test message'
+```
+You should see your message in the websocket client.
