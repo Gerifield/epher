@@ -32,7 +32,7 @@ func (r *Room) DelUser(u *User) {
 	r.userMutex.Unlock()
 }
 
-//UserCount retuts the user's count
+//UserCount returns the user's count
 func (r *Room) UserCount() int {
 	r.userMutex.RLock()
 	defer r.userMutex.RUnlock()

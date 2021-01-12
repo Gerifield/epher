@@ -10,7 +10,7 @@ import (
 
 func main() {
 	r := chi.NewRouter()
-	e := epher.NewEpher()
+	e := epher.New()
 
 	r.Get("/subscribe/{room:[a-zA-Z0-9]+}", e.WebsocketHandler) // Websocket
 	r.Post("/publish/{room:[a-zA-Z0-9]+}", e.PushHandler)       // Http

@@ -22,8 +22,8 @@ type Epher struct {
 	Rooms    map[string]*Room
 }
 
-// NewEpher creates a new global state
-func NewEpher() *Epher {
+// New creates a new global state
+func New() *Epher {
 	return &Epher{
 		roomLock: &sync.RWMutex{},
 		Rooms:    make(map[string]*Room),
@@ -78,16 +78,16 @@ func (e *Epher) PushHandler(rw http.ResponseWriter, r *http.Request) {
 	room := chi.URLParam(r, "room")
 
 	e.roomLock.RLock()
+	defer e.roomLock.RUnlock()
+
 	if _, ok := e.Rooms[room]; ok {
 		b, err := ioutil.ReadAll(r.Body)
-		defer r.Body.Close()
 		if err != nil {
 			return
 		}
+
 		_ = e.Rooms[room].BroadcastText(b)
 	} else {
 		log.Println("No listener in", room)
 	}
-
-	e.roomLock.RUnlock()
 }
