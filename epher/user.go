@@ -10,18 +10,16 @@ import (
 
 // User handler to wrap read/write and other data
 type User struct {
-	ID   int64
-	Room string
+	ID int64
 
 	connLock *sync.Mutex
 	conn     *websocket.Conn
 }
 
 //NewUser creates a new user
-func NewUser(room string, ws *websocket.Conn) *User {
+func NewUser(ws *websocket.Conn) *User {
 	return &User{
 		ID:       rand.Int63(),
-		Room:     room,
 		connLock: &sync.Mutex{},
 		conn:     ws,
 	}

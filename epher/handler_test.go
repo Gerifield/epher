@@ -12,20 +12,26 @@ import (
 )
 
 type testRoom struct {
-	broadcastError error
+	users            []*User
+	broadcastError   error
 	broadcastMessage []byte
 }
 
 func (tr *testRoom) AddUser(u *User) {
-	panic("implement me")
+	tr.users = append(tr.users, u)
 }
 
 func (tr *testRoom) DelUser(u *User) {
-	panic("implement me")
+	for i, v := range tr.users {
+		if v.ID == u.ID {
+			tr.users = append(tr.users[:i], tr.users[i+1:]...)
+			break
+		}
+	}
 }
 
 func (tr *testRoom) UserCount() int {
-	panic("implement me")
+	return len(tr.users)
 }
 
 func (tr *testRoom) BroadcastText(b []byte) error {
@@ -49,4 +55,46 @@ func TestPushHandlerOK(t *testing.T) {
 	e.PushHandler(rr, req)
 	assert.Nil(t, testRoom.broadcastError)
 	assert.Equal(t, "something", string(testRoom.broadcastMessage))
+}
+
+func TestPushHandlerMissingRoom(t *testing.T) {
+	e := New()
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/publish/test1", strings.NewReader("something"))
+
+	// Chi router context magic
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("room", "test1")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	e.PushHandler(rr, req)
+	assert.Equal(t, http.StatusServiceUnavailable, rr.Code)
+	assert.Equal(t, "no_room", rr.Body.String())
+}
+
+func TestAddConnectionWithoutRoom(t *testing.T) {
+	e := New()
+
+	_, ok := e.Rooms["test1"]
+	assert.False(t, ok)
+
+	e.addConnection("test1", &User{ID: 1})
+	_, ok = e.Rooms["test1"]
+	assert.True(t, ok)
+	assert.Equal(t, 1, e.Rooms["test1"].UserCount())
+
+	e.addConnection("test1", &User{ID: 2})
+	assert.Equal(t, 2, e.Rooms["test1"].UserCount())
+}
+
+func TestAddConnectionWithRoom(t *testing.T) {
+	e := New()
+	testRoom := &testRoom{}
+
+	e.Rooms["test1"] = testRoom
+	assert.Len(t, testRoom.users, 0)
+
+	e.addConnection("test1", &User{ID: 1})
+	assert.Len(t, testRoom.users, 1)
 }

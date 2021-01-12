@@ -16,7 +16,7 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-type Roomer interface{
+type Roomer interface {
 	AddUser(u *User)
 	DelUser(u *User)
 	UserCount() int
@@ -39,7 +39,7 @@ func New() *Epher {
 
 func (e *Epher) addConnection(room string, u *User) {
 	e.roomLock.Lock()
-	if _, ok := e.Rooms[u.Room]; ok { // Room exists
+	if _, ok := e.Rooms[room]; ok { // Room exists
 		e.Rooms[room].AddUser(u)
 		//log.Println("User added to", room)
 	} else {
@@ -72,7 +72,7 @@ func (e *Epher) WebsocketHandler(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u := NewUser(room, ws)
+	u := NewUser(ws)
 	e.addConnection(room, u)
 	defer e.delConnection(room, u)
 
@@ -96,5 +96,7 @@ func (e *Epher) PushHandler(rw http.ResponseWriter, r *http.Request) {
 		_ = e.Rooms[room].BroadcastText(b)
 	} else {
 		log.Println("No listener in", room)
+		rw.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = rw.Write([]byte("no_room"))
 	}
 }
