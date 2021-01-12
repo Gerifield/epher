@@ -1,6 +1,7 @@
 package epher
 
 import (
+	"io"
 	"log"
 	"math/rand"
 	"sync"
@@ -16,18 +17,23 @@ type TextSender interface {
 	SendText(b []byte) error
 }
 
+type wsConn interface {
+	ReadMessage() (messageType int, p []byte, err error)
+	NextWriter(messageType int) (io.WriteCloser, error)
+}
+
 // User handler to wrap read/write and other data
 type User struct {
 	ID int64
 
 	connLock *sync.Mutex
-	conn     *websocket.Conn
+	conn     wsConn
 
 	TextSender // Embed the interface
 }
 
 //NewUser creates a new user
-func NewUser(ws *websocket.Conn) *User {
+func NewUser(ws wsConn) *User {
 	u := &User{
 		ID:       rand.Int63(),
 		connLock: &sync.Mutex{},
@@ -59,10 +65,8 @@ func (u *User) ReadLoop() error {
 	for {
 		_, _, err = u.conn.ReadMessage()
 		if err != nil {
-			if e, ok := err.(*websocket.CloseError); ok {
-				if websocket.IsCloseError(err, e.Code) { // Just for fun and testing
-					return nil
-				}
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				return nil
 			}
 			log.Println("Read error", err)
 			return err // Stop the loop
