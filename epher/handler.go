@@ -16,6 +16,7 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+// Roomer help testing the room related here
 type Roomer interface {
 	AddUser(u *User)
 	DelUser(u *User)

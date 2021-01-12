@@ -8,21 +8,34 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// TextBroadcaster helps mocking the SendText call
+// This is an alternate solution to the Roomer (in the handler.go) which define how a Room should work.
+// Here we just define a single requirement to have the User struct a specific method and tie it to an interface.
+// Now in the room_test.go we could simply overwrite how this function should work
+type TextSender interface {
+	SendText(b []byte) error
+}
+
 // User handler to wrap read/write and other data
 type User struct {
 	ID int64
 
 	connLock *sync.Mutex
 	conn     *websocket.Conn
+
+	TextSender // Embed the interface
 }
 
 //NewUser creates a new user
 func NewUser(ws *websocket.Conn) *User {
-	return &User{
+	u := &User{
 		ID:       rand.Int63(),
 		connLock: &sync.Mutex{},
 		conn:     ws,
 	}
+
+	u.TextSender = u // We should wire in the original method into the interface (by default it will be a nil pointer!)
+	return u
 }
 
 //SendText message to the user

@@ -44,7 +44,7 @@ func (r *Room) BroadcastText(b []byte) error {
 	r.userMutex.RLock()
 	var err error
 	for _, u := range r.Users {
-		err = u.SendText(b)
+		err = u.TextSender.SendText(b)
 		if err != nil {
 			break
 		}
