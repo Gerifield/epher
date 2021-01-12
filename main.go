@@ -5,18 +5,19 @@ import (
 	"net/http"
 
 	"github.com/gerifield/epher/epher"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi"
 )
 
 func main() {
-
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 	e := epher.NewEpher()
 
-	r.HandleFunc("/subscribe/{room:[a-zA-Z0-9]+}", e.WebsocketHandler).Methods("GET") // Websocket
-	r.HandleFunc("/publish/{room:[a-zA-Z0-9]+}", e.PushHandler).Methods("POST")       // Http
+	r.Get("/subscribe/{room:[a-zA-Z0-9]+}", e.WebsocketHandler) // Websocket
+	r.Post("/publish/{room:[a-zA-Z0-9]+}", e.PushHandler)       // Http
 
 	log.Println("Started")
-	http.ListenAndServe("127.0.0.1:9090", r)
-
+	err := http.ListenAndServe("127.0.0.1:9090", r)
+	if err != nil {
+		log.Fatalln(err)
+	}
 }
