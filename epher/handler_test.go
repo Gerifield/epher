@@ -98,3 +98,17 @@ func TestAddConnectionWithRoom(t *testing.T) {
 	e.addConnection("test1", &User{ID: 1})
 	assert.Len(t, testRoom.users, 1)
 }
+
+func TestDelConnectionDropRoom(t *testing.T) {
+	e := New()
+	testRoom := &testRoom{}
+
+	e.Rooms["test1"] = testRoom
+	_, ok := e.Rooms["test1"] // Room should be there
+	assert.True(t, ok)
+	assert.Equal(t, 0, e.Rooms["test1"].UserCount()) // No user there
+
+	e.delConnection("test1", &User{ID: 1}) // Trigger a delete with a non-existing user
+	_, ok = e.Rooms["test1"]               // Room should be deleted
+	assert.False(t, ok)
+}
