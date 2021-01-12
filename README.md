@@ -1,4 +1,4 @@
-# Event Pusher
+# Event Pusher ![Go](https://github.com/Gerifield/epher/workflows/Go/badge.svg?branch=master)
 
 This stuff allows users to subscribe to a given channel and let the services to send notifications to those channels with an HTTP request.
 All the messages sent to the websocket endpoint will be dropped.
