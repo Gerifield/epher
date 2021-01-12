@@ -16,17 +16,24 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+type Roomer interface{
+	AddUser(u *User)
+	DelUser(u *User)
+	UserCount() int
+	BroadcastText(b []byte) error
+}
+
 // Epher is the main struct to store the global state
 type Epher struct {
 	roomLock *sync.RWMutex
-	Rooms    map[string]*Room
+	Rooms    map[string]Roomer
 }
 
 // New creates a new global state
 func New() *Epher {
 	return &Epher{
 		roomLock: &sync.RWMutex{},
-		Rooms:    make(map[string]*Room),
+		Rooms:    make(map[string]Roomer),
 	}
 }
 
