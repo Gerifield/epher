@@ -22,9 +22,9 @@ jobs:
       run: go build -v ./...
 
     - name: Test
-      run: go test -v -coverprofile=profile.cov ./...
+      run: GORACE="halt_on_error=1" go test --race -v -coverprofile=profile.cov ./...
 
-    - name: actions-goveralls
+    - name: Update coverage report
       uses: shogo82148/actions-goveralls@v1.4.2
       with:
         path-to-profile: profile.cov
