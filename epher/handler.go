@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var upgrader wsUpgrader = &websocket.Upgrader{
@@ -32,6 +34,12 @@ type Roomer interface {
 type Epher struct {
 	roomLock *sync.RWMutex
 	Rooms    map[string]Roomer
+
+	// Metrics related
+	allPublishedCounter        prometheus.Counter
+	noListenerPublishedCounter prometheus.Counter
+	listenerNum                prometheus.Gauge
+	roomNum                    prometheus.Gauge
 }
 
 // New creates a new global state
@@ -42,7 +50,33 @@ func New() *Epher {
 	}
 }
 
+func (e *Epher) RegisterMetrics() {
+	e.allPublishedCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "all_publish_ops_total",
+		Help: "The total number of published events",
+	})
+
+	e.noListenerPublishedCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "no_listener_publish_ops_total",
+		Help: "The total number of published events where there's no listeners",
+	})
+
+	e.listenerNum = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "listener_num",
+		Help: "Actual number of listener connections",
+	})
+
+	e.roomNum = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "room_num",
+		Help: "Actual number of active rooms",
+	})
+}
+
 func (e *Epher) addConnection(room string, u *User) {
+	if e.listenerNum != nil {
+		e.listenerNum.Inc()
+	}
+
 	e.roomLock.Lock()
 	if _, ok := e.Rooms[room]; ok { // Room exists
 		e.Rooms[room].AddUser(u)
@@ -53,16 +87,28 @@ func (e *Epher) addConnection(room string, u *User) {
 		e.Rooms[room] = r
 		//log.Println("Room created", room)
 	}
+
+	if e.roomNum != nil {
+		e.roomNum.Set(float64(len(e.Rooms)))
+	}
 	e.roomLock.Unlock()
 }
 
 func (e *Epher) delConnection(room string, u *User) {
+	if e.listenerNum != nil {
+		e.listenerNum.Dec()
+	}
+
 	e.roomLock.Lock()
 	e.Rooms[room].DelUser(u)
 	//log.Println("User removed from", room)
 	if e.Rooms[room].UserCount() == 0 { // Nobody left
 		delete(e.Rooms, room)
 		//log.Println("Room", room, "destroyed")
+	}
+
+	if e.roomNum != nil {
+		e.roomNum.Set(float64(len(e.Rooms)))
 	}
 	e.roomLock.Unlock()
 }
@@ -91,6 +137,10 @@ func (e *Epher) WebsocketHandler(rw http.ResponseWriter, r *http.Request) {
 func (e *Epher) PushHandler(rw http.ResponseWriter, r *http.Request) {
 	room := chi.URLParam(r, "room")
 
+	if e.allPublishedCounter != nil {
+		e.allPublishedCounter.Inc()
+	}
+
 	e.roomLock.RLock()
 	defer e.roomLock.RUnlock()
 
@@ -105,5 +155,9 @@ func (e *Epher) PushHandler(rw http.ResponseWriter, r *http.Request) {
 		log.Println("No listener in", room)
 		rw.WriteHeader(http.StatusServiceUnavailable)
 		_, _ = rw.Write([]byte("no_room"))
+
+		if e.noListenerPublishedCounter != nil {
+			e.noListenerPublishedCounter.Inc()
+		}
 	}
 }
