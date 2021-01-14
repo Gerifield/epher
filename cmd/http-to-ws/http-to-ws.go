@@ -15,7 +15,6 @@ func main() {
 	flag.Parse()
 	r := chi.NewRouter()
 	e := epher.New()
-	e.RegisterMetrics()
 
 	r.Get("/subscribe/{room:[a-zA-Z0-9]+}", e.WebsocketHandler) // Websocket
 	r.Post("/publish/{room:[a-zA-Z0-9]+}", e.PushHandler)       // Http

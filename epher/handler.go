@@ -12,10 +12,40 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-var upgrader wsUpgrader = &websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
+var (
+	upgrader wsUpgrader = &websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
+
+	// Metrics related
+	allPublishedCounter        prometheus.Counter
+	noListenerPublishedCounter prometheus.Counter
+	listenerNum                prometheus.Gauge
+	roomNum                    prometheus.Gauge
+)
+
+func init() {
+	allPublishedCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "all_publish_ops_total",
+		Help: "The total number of published events",
+	})
+
+	noListenerPublishedCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "no_listener_publish_ops_total",
+		Help: "The total number of published events where there's no listeners",
+	})
+
+	listenerNum = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "listener_num",
+		Help: "Actual number of listener connections",
+	})
+
+	roomNum = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "room_num",
+		Help: "Actual number of active rooms",
+	})
 }
 
 type wsUpgrader interface {
@@ -34,12 +64,6 @@ type Roomer interface {
 type Epher struct {
 	roomLock *sync.RWMutex
 	Rooms    map[string]Roomer
-
-	// Metrics related
-	allPublishedCounter        prometheus.Counter
-	noListenerPublishedCounter prometheus.Counter
-	listenerNum                prometheus.Gauge
-	roomNum                    prometheus.Gauge
 }
 
 // New creates a new global state
@@ -50,32 +74,8 @@ func New() *Epher {
 	}
 }
 
-func (e *Epher) RegisterMetrics() {
-	e.allPublishedCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "all_publish_ops_total",
-		Help: "The total number of published events",
-	})
-
-	e.noListenerPublishedCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "no_listener_publish_ops_total",
-		Help: "The total number of published events where there's no listeners",
-	})
-
-	e.listenerNum = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "listener_num",
-		Help: "Actual number of listener connections",
-	})
-
-	e.roomNum = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "room_num",
-		Help: "Actual number of active rooms",
-	})
-}
-
 func (e *Epher) addConnection(room string, u *User) {
-	if e.listenerNum != nil {
-		e.listenerNum.Inc()
-	}
+	listenerNum.Inc()
 
 	e.roomLock.Lock()
 	if _, ok := e.Rooms[room]; ok { // Room exists
@@ -88,16 +88,12 @@ func (e *Epher) addConnection(room string, u *User) {
 		//log.Println("Room created", room)
 	}
 
-	if e.roomNum != nil {
-		e.roomNum.Set(float64(len(e.Rooms)))
-	}
+	roomNum.Set(float64(len(e.Rooms)))
 	e.roomLock.Unlock()
 }
 
 func (e *Epher) delConnection(room string, u *User) {
-	if e.listenerNum != nil {
-		e.listenerNum.Dec()
-	}
+	listenerNum.Dec()
 
 	e.roomLock.Lock()
 	e.Rooms[room].DelUser(u)
@@ -107,9 +103,7 @@ func (e *Epher) delConnection(room string, u *User) {
 		//log.Println("Room", room, "destroyed")
 	}
 
-	if e.roomNum != nil {
-		e.roomNum.Set(float64(len(e.Rooms)))
-	}
+	roomNum.Set(float64(len(e.Rooms)))
 	e.roomLock.Unlock()
 }
 
@@ -136,10 +130,7 @@ func (e *Epher) WebsocketHandler(rw http.ResponseWriter, r *http.Request) {
 //PushHandler sends the HTTP post to the websocket listeners
 func (e *Epher) PushHandler(rw http.ResponseWriter, r *http.Request) {
 	room := chi.URLParam(r, "room")
-
-	if e.allPublishedCounter != nil {
-		e.allPublishedCounter.Inc()
-	}
+	allPublishedCounter.Inc()
 
 	e.roomLock.RLock()
 	defer e.roomLock.RUnlock()
@@ -156,8 +147,6 @@ func (e *Epher) PushHandler(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(http.StatusServiceUnavailable)
 		_, _ = rw.Write([]byte("no_room"))
 
-		if e.noListenerPublishedCounter != nil {
-			e.noListenerPublishedCounter.Inc()
-		}
+		noListenerPublishedCounter.Inc()
 	}
 }
