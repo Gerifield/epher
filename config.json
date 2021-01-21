@@ -1,0 +1,9 @@
+{
+  "routes":[
+    {
+    "ws_address": "ws://127.0.0.1:9090/subscribe/test1",
+    "http_url": "http://127.0.0.1:9090/publish/test2",
+    "forward_response": true
+    }
+  ]
+}
