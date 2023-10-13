@@ -8,6 +8,10 @@ All the messages sent to the websocket endpoint will be dropped.
 ```
   -listen string
     	HTTP and WS server listen address (default ":9090")
+  -redisAddr string
+    	Redis server address (optional)
+  -redisPass string
+    	Redis server password (optional)
 ```
 
 # Example

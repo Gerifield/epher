@@ -1,7 +1,8 @@
 package epher
 
 import (
-	"io/ioutil"
+	"github.com/redis/go-redis/v9"
+	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -58,19 +59,24 @@ type Roomer interface {
 	DelUser(u *User)
 	UserCount() int
 	BroadcastText(b []byte) error
+	Stop()
 }
 
 // Epher is the main struct to store the global state
 type Epher struct {
 	roomLock *sync.RWMutex
 	Rooms    map[string]Roomer
+
+	redis *redis.Client
 }
 
 // New creates a new global state
-func New() *Epher {
+func New(redis *redis.Client) *Epher {
 	return &Epher{
 		roomLock: &sync.RWMutex{},
 		Rooms:    make(map[string]Roomer),
+
+		redis: redis,
 	}
 }
 
@@ -82,7 +88,7 @@ func (e *Epher) addConnection(room string, u *User) {
 		e.Rooms[room].AddUser(u)
 		//log.Println("User added to", room)
 	} else {
-		r := NewRoom(room)
+		r := NewRoom(room, e.redis)
 		r.AddUser(u)
 		e.Rooms[room] = r
 		//log.Println("Room created", room)
@@ -99,6 +105,7 @@ func (e *Epher) delConnection(room string, u *User) {
 	e.Rooms[room].DelUser(u)
 	//log.Println("User removed from", room)
 	if e.Rooms[room].UserCount() == 0 { // Nobody left
+		e.Rooms[room].Stop() // Signal a stop there before delete
 		delete(e.Rooms, room)
 		//log.Println("Room", room, "destroyed")
 	}
@@ -116,6 +123,7 @@ func (e *Epher) WebsocketHandler(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		http.Error(rw, "websocket_upgrade_failed", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -127,7 +135,7 @@ func (e *Epher) WebsocketHandler(rw http.ResponseWriter, r *http.Request) {
 	_ = u.ReadLoop()
 }
 
-//PushHandler sends the HTTP post to the websocket listeners
+// PushHandler sends the HTTP post to the websocket listeners
 func (e *Epher) PushHandler(rw http.ResponseWriter, r *http.Request) {
 	room := chi.URLParam(r, "room")
 	allPublishedCounter.Inc()
@@ -136,7 +144,7 @@ func (e *Epher) PushHandler(rw http.ResponseWriter, r *http.Request) {
 	defer e.roomLock.RUnlock()
 
 	if _, ok := e.Rooms[room]; ok {
-		b, err := ioutil.ReadAll(r.Body)
+		b, err := io.ReadAll(r.Body)
 		if err != nil {
 			return
 		}
