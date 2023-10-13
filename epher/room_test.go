@@ -9,7 +9,7 @@ import (
 )
 
 func TestBasicRoomFunctions(t *testing.T) {
-	r := NewRoom("test1")
+	r := NewRoom("test1", nil)
 	testUser1 := &User{ID: 1}
 	testUser2 := &User{ID: 2}
 
@@ -38,7 +38,7 @@ func (tts *testTextSender) SendText(b []byte) error {
 }
 
 func TestBroadcastText(t *testing.T) {
-	r := NewRoom("test1")
+	r := NewRoom("test1", nil)
 	testUser1 := &User{
 		ID:       1,
 		connLock: &sync.Mutex{},
@@ -61,7 +61,7 @@ func TestBroadcastText(t *testing.T) {
 }
 
 func TestBroadcastTextError(t *testing.T) {
-	r := NewRoom("test1")
+	r := NewRoom("test1", nil)
 	testUser1 := &User{
 		ID:       1,
 		connLock: &sync.Mutex{},

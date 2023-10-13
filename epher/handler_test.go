@@ -41,8 +41,10 @@ func (tr *testRoom) BroadcastText(b []byte) error {
 	return tr.broadcastError
 }
 
+func (tr *testRoom) Stop() {}
+
 func TestPushHandlerOK(t *testing.T) {
-	e := New()
+	e := New(nil)
 	testRoom := &testRoom{}
 	e.Rooms["test1"] = testRoom
 
@@ -60,7 +62,7 @@ func TestPushHandlerOK(t *testing.T) {
 }
 
 func TestPushHandlerMissingRoom(t *testing.T) {
-	e := New()
+	e := New(nil)
 
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/publish/test1", strings.NewReader("something"))
@@ -76,7 +78,7 @@ func TestPushHandlerMissingRoom(t *testing.T) {
 }
 
 func TestAddConnectionWithoutRoom(t *testing.T) {
-	e := New()
+	e := New(nil)
 
 	_, ok := e.Rooms["test1"]
 	assert.False(t, ok)
@@ -91,7 +93,7 @@ func TestAddConnectionWithoutRoom(t *testing.T) {
 }
 
 func TestAddConnectionWithRoom(t *testing.T) {
-	e := New()
+	e := New(nil)
 	testRoom := &testRoom{}
 
 	e.Rooms["test1"] = testRoom
@@ -102,7 +104,7 @@ func TestAddConnectionWithRoom(t *testing.T) {
 }
 
 func TestDelConnectionDropRoom(t *testing.T) {
-	e := New()
+	e := New(nil)
 	testRoom := &testRoom{}
 
 	e.Rooms["test1"] = testRoom
@@ -124,7 +126,7 @@ func (t testUpgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHe
 }
 
 func TestWebsocketHandlerUpgradeFail(t *testing.T) {
-	e := New()
+	e := New(nil)
 
 	// Make sure we store then restore the global state
 	oldUpgrader := upgrader
